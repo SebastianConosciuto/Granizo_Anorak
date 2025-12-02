@@ -6,7 +6,7 @@
   "description": "Granizo - Análisis de temperatura de tope de nube (single view)",
   "scripts": {
     "dev": "vite --port 5174",
-    "build": "vite build",
+    "build": "vite build && node transformPaths.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
