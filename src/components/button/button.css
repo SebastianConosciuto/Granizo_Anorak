@@ -1,0 +1,122 @@
+/* Base Button Styles */
+.custom-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: 12px;
+    border: none;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.custom-button:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.button-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+    font-family: 'Material Symbols Outlined';
+}
+
+.button-text {
+    font-weight: 500;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Primary Button - White background, dark text */
+.custom-button.primary {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    background-color: #F9F9F9;
+    color: #1f2937;
+    border: 2px solid #A5DCD7;
+}
+
+.custom-button.primary:hover:not(:disabled) {
+    background-color: #ECFAF8;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.custom-button.primary .button-icon {
+    color: #1f2937;
+}
+
+/* Secondary Button - Light background */
+.custom-button.secondary {
+    font-family: 'Poppins', sans-serif;
+    background-color: #F9F9F9;
+    color: #374151;
+    border: 2px solid #94AAB5;
+}
+
+.custom-button.secondary:hover:not(:disabled) {
+    background-color: #EBF1F5;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.custom-button.secondary .button-icon {
+    color: #374151;
+}
+
+/* Tertiary/Accent Button - Warm peach/orange background */
+.custom-button.tertiary {
+    font-family: 'Poppins', sans-serif;
+    background-color: #F9F9F9;
+    color: #1f2937;
+    border: 2px solid #F6AF7A;
+}
+
+.custom-button.tertiary:hover:not(:disabled) {
+    background-color: #FFF6F0;
+    border-color: #F6AF7A;
+    box-shadow: 0 2px 6px rgba(251, 146, 60, 0.3);
+}
+
+.custom-button.tertiary .button-icon {
+    color: #1f2937;
+}
+
+/* Disabled Button - Very light, faded appearance */
+.custom-button.disabled,
+.custom-button:disabled {
+    font-family: 'Poppins', sans-serif;
+    background-color: #F1F4F7;
+    color: #d1d5db;
+    border: 1px solid #CBD5DC;
+    cursor: not-allowed;
+    opacity: 0.5;
+    box-shadow: none;
+}
+
+.custom-button.disabled .button-icon,
+.custom-button:disabled .button-icon {
+    color: #d1d5db;
+}
+
+.custom-button.disabled:hover,
+.custom-button:disabled:hover {
+    background-color: #f3f4f6;
+    border-color: #e5e7eb;
+    box-shadow: none;
+    transform: none;
+}
+
+/* Icon-only button variant */
+.custom-button.icon-only {
+    padding: 0.625rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    border-radius: 10px;
+}
+
+.custom-button.icon-only .button-text {
+    display: none;
+}
