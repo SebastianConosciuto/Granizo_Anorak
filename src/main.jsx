@@ -1,18 +1,17 @@
 import React from "react";
-import ReactDOM from "react-dom";
+import ReactDOM from "react-dom/client";
 import App from "./App";
 
-if(avt.platform === "web"){
-    window.addEventListener("readySDK", loadExt);
-} else {
-    loadExt();
+const loadExt = () => {
+  ReactDOM.createRoot(document.getElementById("root")).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
 };
 
-function loadExt() {
-    ReactDOM.render(
-        <React.StrictMode>
-            <App />
-        </React.StrictMode>,
-        document.getElementById("root")
-    );
-};
+if (avt) {
+  loadExt();
+} else {
+  window.addEventListener("readySDK", loadExt);
+}
