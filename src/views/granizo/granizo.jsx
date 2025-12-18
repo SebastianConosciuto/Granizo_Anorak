@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Box } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import Header from './components/Header';
 import TemperatureChart from './components/TemperatureChart';
 import TemperatureTable from './components/TemperatureTable';
+import { exportToPDF } from '../../utils/exportUtils';
 
 const ViewContainer = styled(Box)({
   display: 'flex',
@@ -33,34 +34,15 @@ function GranizoView() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedPointTime, setSelectedPointTime] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  
+  const chartRef = useRef(null);
+  const tableRef = useRef(null);
 
   const handleCalculate = async (date) => {
     setLoading(true);
     setSelectedDate(date);
-    setSelectedPointTime(null); // Reset selected point
-
-    // TODO: Implement actual API call
-    // Get polygon coordinates from Auravant SDK
-    // const polygon = await avt.map.getSelectedPolygon();
-    // const lat = polygon.centroid.lat;
-    // const lon = polygon.centroid.lon;
-
-    // Calculate day before and after
-    // const dayBefore = new Date(date);
-    // dayBefore.setDate(dayBefore.getDate() - 1);
-    // const dayAfter = new Date(date);
-    // dayAfter.setDate(dayAfter.getDate() + 1);
-
-    // const formatDate = (date) => {
-    //   return date.toISOString().split('T')[0];
-    // };
-
-    // const response = await fetch(
-    //   `http://10.0.26.216:5900/api/data/point?lat=${lat}&lon=${lon}&start_date=${formatDate(dayBefore)}&end_date=${formatDate(dayAfter)}&variable=cloudTemperature&resolution=15min`
-    // );
-    // const data = await response.json();
-
-    // Hardcoded data for demonstration
+    setSelectedPointTime(null); 
     setTimeout(() => {
       const hardcodedData = generateHardcodedData(date);
       setTemperatureData(hardcodedData);
@@ -71,46 +53,36 @@ function GranizoView() {
   const generateHardcodedData = (centerDate) => {
     const data = [];
     const startDate = new Date(centerDate);
-    // Start from the day before
     startDate.setDate(startDate.getDate() - 1);
     startDate.setHours(0, 0, 0, 0);
 
-    // Generate 72 hours of data with 15-minute intervals (72 * 4 = 288 points)
     const totalPoints = 72 * 4;
     for (let i = 0; i < totalPoints; i++) {
       const time = new Date(startDate);
       time.setMinutes(time.getMinutes() + i * 15);
 
-      const hourOffset = i / 4; // Convert 15-min intervals to hours
+      const hourOffset = i / 4;
       let value;
       
-      // Day before: Normal temperature around 20°C
       if (hourOffset < 24) {
         value = 20 + Math.random() * 5;
       }
-      // Selected day: Temperature drop (frost event)
       else if (hourOffset >= 24 && hourOffset < 48) {
         const hourOfDay = hourOffset - 24;
         if (hourOfDay < 12) {
-          // Morning: still normal
           value = 20 + Math.random() * 5;
         } else if (hourOfDay < 20) {
-          // Afternoon to evening: rapid drop
           const dropProgress = (hourOfDay - 12) / 8;
           value = 20 - dropProgress * 50 + Math.random() * 3;
         } else {
-          // Night: very cold
           value = -25 - Math.random() * 5;
         }
       }
-      // Day after: Recovery
       else {
         const hourOfDay = hourOffset - 48;
         if (hourOfDay < 8) {
-          // Early morning: still cold
           value = -20 + (hourOfDay / 8) * 15 + Math.random() * 3;
         } else {
-          // Warming up
           value = -5 + ((hourOfDay - 8) / 16) * 25 + Math.random() * 5;
         }
       }
@@ -135,11 +107,55 @@ function GranizoView() {
     setSelectedPointTime(timeString);
   };
 
-  const handleDownloadPDF = () => {
-    // TODO: Implement PDF generation
-    console.log('Downloading PDF...');
-    // This would use a library like jsPDF or html2canvas to capture
-    // the chart and table components and generate a PDF
+  const handleDownloadPDF = async () => {
+    if (!temperatureData) {
+      console.warn('No data available to export');
+      return;
+    }
+
+    setIsExporting(true);
+    
+    try {
+      const dateStr = selectedDate 
+        ? selectedDate.toLocaleDateString('es-AR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+          }).replace(/\//g, '-')
+        : 'sin-fecha';
+
+      const filename = `granizo-reporte-${dateStr}`;
+
+      const elements = [];
+
+      if (chartRef.current) {
+        elements.push({
+          ref: chartRef,
+          name: 'Gráfica de Temperatura',
+        });
+      }
+
+      if (tableRef.current && selectedPointTime) {
+        elements.push({
+          ref: tableRef,
+          name: 'Tabla de Valores',
+        });
+      }
+
+      if (elements.length === 0) {
+        console.warn('No elements to export');
+        return;
+      }
+
+      await exportToPDF(elements, filename);
+      
+      console.log('✅ PDF exported successfully');
+    } catch (error) {
+      console.error('❌ Error exporting PDF:', error);
+      alert('Error al generar el PDF. Por favor, intente nuevamente.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -147,19 +163,21 @@ function GranizoView() {
       <Header
         onCalculate={handleCalculate}
         onDownloadPDF={handleDownloadPDF}
-        loading={loading}
+        loading={loading || isExporting}
         hasData={!!temperatureData}
       />
       <ContentArea>
         {temperatureData && (
           <>
             <TemperatureChart 
+              ref={chartRef}
               data={temperatureData} 
               selectedDate={selectedDate}
               selectedPointTime={selectedPointTime}
               onPointClick={handlePointClick}
             />
             <TemperatureTable 
+              ref={tableRef}
               data={temperatureData} 
               selectedDate={selectedDate}
               selectedPointTime={selectedPointTime}
@@ -195,7 +213,7 @@ function GranizoView() {
               fontFamily: "'Poppins', sans-serif",
             }}
           >
-            Cargando datos...
+            {isExporting ? 'Generando PDF...' : 'Cargando datos...'}
           </Box>
         )}
       </ContentArea>

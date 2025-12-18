@@ -2,17 +2,15 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 /**
- * Captures a DOM element as a canvas with high quality
- * @param {HTMLElement} element - The element to capture
- * @param {number} scale - Quality scale (default: 2 for high quality)
- * @returns {Promise<HTMLCanvasElement>} Canvas element
+ * @param {HTMLElement} element 
+ * @param {number} scale 
+ * @returns {Promise<HTMLCanvasElement>} 
  */
 export const captureElement = async (element, scale = 2) => {
   if (!element) {
     throw new Error('Element not found');
   }
 
-  // Wait a bit for any animations to settle
   await new Promise(resolve => setTimeout(resolve, 100));
 
   const canvas = await html2canvas(element, {
@@ -28,9 +26,8 @@ export const captureElement = async (element, scale = 2) => {
 };
 
 /**
- * Exports multiple elements to a single PDF
- * @param {Array<{ref: React.RefObject, name: string}>} elements - Array of refs and names
- * @param {string} filename - PDF filename without extension
+ * @param {Array<{ref: React.RefObject, name: string}>} elements
+ * @param {string} filename
  */
 export const exportToPDF = async (elements, filename = 'reporte') => {
   try {
@@ -44,9 +41,9 @@ export const exportToPDF = async (elements, filename = 'reporte') => {
     const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 10;
     const contentWidth = pageWidth - 2 * margin;
-    const gap = 5; // Gap between images on same page
+    const gap = 5;
 
-    let currentY = margin; // Track vertical position on current page
+    let currentY = margin;
     let isFirstPage = true;
 
     for (const { ref, name } of elements) {
@@ -55,36 +52,28 @@ export const exportToPDF = async (elements, filename = 'reporte') => {
         continue;
       }
 
-      // Capture element
       const canvas = await captureElement(ref.current);
       const imgData = canvas.toDataURL('image/png');
 
-      // Calculate dimensions to fit page width
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      // Check if image fits on current page
       const spaceNeeded = imgHeight + (isFirstPage ? 0 : gap);
       const availableSpace = pageHeight - currentY - margin;
 
       if (!isFirstPage && spaceNeeded > availableSpace) {
-        // Image doesn't fit, start new page
         pdf.addPage();
         currentY = margin;
       }
 
-      // Add gap before image (except for first image on page)
       if (currentY > margin) {
         currentY += gap;
       }
 
-      // Add image to PDF at current position
       pdf.addImage(imgData, 'PNG', margin, currentY, imgWidth, imgHeight);
 
-      // Update vertical position for next image
       currentY += imgHeight;
 
-      // Warn if single image is taller than a full page
       if (imgHeight > pageHeight - 2 * margin) {
         console.warn(`${name} is taller than page height and may be cropped`);
       }
@@ -92,7 +81,6 @@ export const exportToPDF = async (elements, filename = 'reporte') => {
       isFirstPage = false;
     }
 
-    // Save PDF
     pdf.save(`${filename}.pdf`);
     return true;
   } catch (error) {
@@ -102,9 +90,8 @@ export const exportToPDF = async (elements, filename = 'reporte') => {
 };
 
 /**
- * Exports multiple elements to a single PDF with support for splitting tall images
- * @param {Array<{ref: React.RefObject, name: string}>} elements - Array of refs and names
- * @param {string} filename - PDF filename without extension
+ * @param {Array<{ref: React.RefObject, name: string}>} elements 
+ * @param {string} filename 
  */
 export const exportToPDFWithSplitting = async (elements, filename = 'reporte') => {
   try {
@@ -130,34 +117,27 @@ export const exportToPDFWithSplitting = async (elements, filename = 'reporte') =
         continue;
       }
 
-      // Capture element
       const canvas = await captureElement(ref.current);
       const imgData = canvas.toDataURL('image/png');
 
-      // Calculate dimensions to fit page width
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      // If image is taller than a page, split it
       if (imgHeight > contentHeight) {
-        // Calculate how many pages needed
         const numPages = Math.ceil(imgHeight / contentHeight);
         
         for (let i = 0; i < numPages; i++) {
-          // Add new page if needed
           if (!isFirstPage || i > 0) {
             pdf.addPage();
           }
           isFirstPage = false;
 
-          // Calculate the portion of image for this page
           const sourceY = (i * contentHeight * canvas.height) / imgHeight;
           const sourceHeight = Math.min(
             (contentHeight * canvas.height) / imgHeight,
             canvas.height - sourceY
           );
 
-          // Create temporary canvas for this slice
           const sliceCanvas = document.createElement('canvas');
           sliceCanvas.width = canvas.width;
           sliceCanvas.height = sourceHeight;
@@ -175,9 +155,8 @@ export const exportToPDFWithSplitting = async (elements, filename = 'reporte') =
           pdf.addImage(sliceImgData, 'PNG', margin, margin, imgWidth, sliceImgHeight);
         }
 
-        currentY = margin; // Reset for next element
+        currentY = margin;
       } else {
-        // Image fits on a page, use regular logic
         const spaceNeeded = imgHeight + (currentY > margin ? gap : 0);
         const availableSpace = pageHeight - currentY - margin;
 
@@ -206,9 +185,8 @@ export const exportToPDFWithSplitting = async (elements, filename = 'reporte') =
 };
 
 /**
- * Exports a single element as PNG image
- * @param {React.RefObject} ref - Element reference
- * @param {string} filename - Image filename without extension
+ * @param {React.RefObject} ref 
+ * @param {string} filename 
  */
 export const exportToPNG = async (ref, filename = 'imagen') => {
   try {
@@ -218,7 +196,6 @@ export const exportToPNG = async (ref, filename = 'imagen') => {
 
     const canvas = await captureElement(ref.current);
     
-    // Convert to blob and download
     canvas.toBlob((blob) => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -236,9 +213,8 @@ export const exportToPNG = async (ref, filename = 'imagen') => {
 };
 
 /**
- * Exports multiple elements as separate PNG images
- * @param {Array<{ref: React.RefObject, name: string}>} elements - Array of refs and names
- * @param {string} baseFilename - Base filename (will be appended with element name)
+ * @param {Array<{ref: React.RefObject, name: string}>} elements
+ * @param {string} baseFilename 
  */
 export const exportMultipleToPNG = async (elements, baseFilename = 'reporte') => {
   try {
@@ -251,7 +227,6 @@ export const exportMultipleToPNG = async (elements, baseFilename = 'reporte') =>
       const filename = `${baseFilename}_${name.toLowerCase().replace(/\s/g, '_')}`;
       await exportToPNG(ref, filename);
       
-      // Small delay between downloads to avoid browser blocking
       await new Promise(resolve => setTimeout(resolve, 300));
     }
     return true;

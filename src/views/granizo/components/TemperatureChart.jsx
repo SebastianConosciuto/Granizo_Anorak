@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, forwardRef } from 'react';
 import { Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -194,10 +194,9 @@ const CustomDot = (props) => {
   );
 };
 
-function TemperatureChart({ data, selectedDate, selectedPointTime, onPointClick }) {
+const TemperatureChart = forwardRef(({ data, selectedDate, selectedPointTime, onPointClick }, ref) => {
   if (!data || !data.data) return null;
 
-  // Transform data for Recharts
   const chartData = data.data.map((item) => {
     const date = new Date(item.time);
     return {
@@ -214,13 +213,11 @@ function TemperatureChart({ data, selectedDate, selectedPointTime, onPointClick 
     };
   });
 
-  // Custom tick formatter to show date changes and times
   const formatXAxis = (value) => {
     const date = new Date(value);
     const hour = date.getHours();
     const minute = date.getMinutes();
 
-    // Show date at midnight (start of new day)
     if (hour === 0 && minute === 0) {
       return date.toLocaleDateString('es-AR', {
         day: '2-digit',
@@ -228,7 +225,6 @@ function TemperatureChart({ data, selectedDate, selectedPointTime, onPointClick 
         year: '2-digit',
       });
     } 
-    // Show time every 6 hours
     else if (minute === 0 && hour % 6 === 0) {
       return date.toLocaleTimeString('es-AR', {
         hour: '2-digit',
@@ -238,7 +234,6 @@ function TemperatureChart({ data, selectedDate, selectedPointTime, onPointClick 
     return '';
   };
 
-  // Generate custom ticks to ensure dates show at midnight
   const customTicks = useMemo(() => {
     if (!chartData || chartData.length === 0) return [];
     
@@ -248,7 +243,6 @@ function TemperatureChart({ data, selectedDate, selectedPointTime, onPointClick 
       const hour = date.getHours();
       const minute = date.getMinutes();
       
-      // Add tick at midnight or every 6 hours
       if ((hour === 0 && minute === 0) || (minute === 0 && hour % 6 === 0)) {
         ticks.push(item.time);
       }
@@ -271,11 +265,11 @@ function TemperatureChart({ data, selectedDate, selectedPointTime, onPointClick 
   };
 
   const handleLearnMore = () => {
-    window.open('https://www.goes-r.gov/products/baseline-cloud-top-height.html', '_blank');
+    window.open('', '_blank');
   };
 
   return (
-    <ChartContainer>
+    <ChartContainer ref={ref}>
       <ChartHeader>
         <ChartTitleSection>
           <ChartTitle>Temperatura tope de nube ((°C)/Tiempo)</ChartTitle>
@@ -345,6 +339,8 @@ function TemperatureChart({ data, selectedDate, selectedPointTime, onPointClick 
       </Box>
     </ChartContainer>
   );
-}
+});
+
+TemperatureChart.displayName = 'TemperatureChart';
 
 export default TemperatureChart;

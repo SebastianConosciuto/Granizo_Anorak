@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, forwardRef } from 'react';
 import { Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -101,23 +101,19 @@ const TableCell = styled('td')(({ isDateCell, isCold, isHighlighted }) => ({
 
 const columnHelper = createColumnHelper();
 
-function TemperatureTable({ data, selectedDate, selectedPointTime }) {
+const TemperatureTable = forwardRef(({ data, selectedDate, selectedPointTime }, ref) => {
   if (!data || !data.data) return null;
 
-  // Process data into table format
   const tableData = useMemo(() => {
     if (!selectedPointTime) return [];
 
-    // Find the index of the selected point
     const selectedIndex = data.data.findIndex(item => item.time === selectedPointTime);
     if (selectedIndex === -1) return [];
 
-    // Get the next 4 hours (16 points at 15-minute intervals) plus the starting point = 17 total
     const next4Hours = data.data.slice(selectedIndex, selectedIndex + 16);
     
     if (next4Hours.length === 0) return [];
 
-    // Group by rows, each row shows 4 data points (1 hour)
     const rows = [];
     for (let i = 0; i < 17; i += 4) {
       const hourData = next4Hours.slice(i, i + 4);
@@ -135,7 +131,6 @@ function TemperatureTable({ data, selectedDate, selectedPointTime }) {
         isStartPoint: i === 0,
       };
 
-      // Add each 15-minute point, filling with null if not available
       for (let idx = 0; idx < 4; idx++) {
         if (hourData[idx]) {
           row[`point${idx}`] = {
@@ -153,7 +148,6 @@ function TemperatureTable({ data, selectedDate, selectedPointTime }) {
     return rows;
   }, [data, selectedPointTime]);
 
-  // Define columns
   const columns = useMemo(
     () => [
       columnHelper.accessor('time', {
@@ -217,7 +211,7 @@ function TemperatureTable({ data, selectedDate, selectedPointTime }) {
   });
 
   return (
-    <TableContainer>
+    <TableContainer ref={ref}>
       <TableHeader>
         <TableTitle>Tabla de valores (intervalos de 15 minutos)</TableTitle>
         <TableSubtitle>
@@ -298,6 +292,8 @@ function TemperatureTable({ data, selectedDate, selectedPointTime }) {
       )}
     </TableContainer>
   );
-}
+});
+
+TemperatureTable.displayName = 'TemperatureTable';
 
 export default TemperatureTable;
