@@ -10,7 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-  Dot,
+  ReferenceArea,
 } from 'recharts';
 
 const ChartContainer = styled(Box)({
@@ -31,16 +31,6 @@ const ChartContainer = styled(Box)({
 
 const ChartHeader = styled(Box)({
   marginBottom: '1rem',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-start',
-  gap: '1rem',
-  flexWrap: 'wrap',
-});
-
-const ChartTitleSection = styled(Box)({
-  flex: 1,
-  minWidth: '250px',
 });
 
 const ChartTitle = styled(Typography)({
@@ -48,7 +38,13 @@ const ChartTitle = styled(Typography)({
   fontSize: '1.125rem',
   fontWeight: 600,
   color: '#263238',
-  marginBottom: '0.25rem',
+});
+
+const ChartFooter = styled(Box)({
+  marginTop: '1rem',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.5rem',
 });
 
 const InfoText = styled(Typography)({
@@ -56,20 +52,19 @@ const InfoText = styled(Typography)({
   fontSize: '0.75rem',
   fontWeight: 400,
   color: '#1A8F89',
-  marginTop: '0.5rem',
   fontStyle: 'italic',
 });
 
 const DataSourceSection = styled(Box)({
   display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'flex-end',
-  gap: '0.25rem',
+  alignItems: 'center',
+  gap: '0.5rem',
+  marginTop: '0.25rem',
 });
 
 const DataSourceLabel = styled(Typography)({
   fontFamily: "'Poppins', sans-serif",
-  fontSize: '0.875rem',
+  fontSize: '0.75rem',
   fontWeight: 600,
   color: '#263238',
 });
@@ -87,9 +82,92 @@ const LearnMoreLink = styled(Typography)({
   },
 });
 
+const LegendContainer = styled(Box)({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  gap: '1.5rem',
+  marginTop: '0.5rem',
+  flexWrap: 'wrap',
+});
+
+const LegendItem = styled(Box)({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+});
+
+const LegendColor = styled(Box)(({ color, isArea }) => ({
+  width: isArea ? '20px' : '20px',
+  height: isArea ? '12px' : '4px',
+  backgroundColor: color,
+  borderRadius: isArea ? '2px' : '2px',
+  opacity: isArea ? 0.6 : 1,
+}));
+
+const LegendText = styled(Typography)({
+  fontFamily: "'Poppins', sans-serif",
+  fontSize: '0.75rem',
+  fontWeight: 500,
+  color: '#6b7280',
+});
+
 const CustomTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
     const data = payload[0];
+    
+    // Check if this is a null (no cloud) point
+    if (data.payload.isNull) {
+      const date = new Date(data.payload.time);
+      const formattedDate = date.toLocaleDateString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+      const formattedTime = date.toLocaleTimeString('es-AR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      return (
+        <Box
+          sx={{
+            backgroundColor: '#e0f2fe',
+            border: '1px solid #7dd3fc',
+            borderRadius: '8px',
+            padding: '0.75rem',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+          }}
+        >
+          <Typography
+            sx={{
+              fontFamily: "'Poppins', sans-serif",
+              fontSize: '0.75rem',
+              color: '#6b7280',
+              marginBottom: '0.25rem',
+            }}
+          >
+            {formattedDate} - {formattedTime}
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '1rem', color: '#0284c7' }}>
+              cloud_off
+            </span>
+            <Typography
+              sx={{
+                fontFamily: "'Poppins', sans-serif",
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: '#0284c7',
+              }}
+            >
+              Sin nubes detectadas
+            </Typography>
+          </Box>
+        </Box>
+      );
+    }
+
     const date = new Date(data.payload.time);
     const formattedDate = date.toLocaleDateString('es-AR', {
       day: '2-digit',
@@ -126,7 +204,7 @@ const CustomTooltip = ({ active, payload }) => {
             fontFamily: "'Poppins', sans-serif",
             fontSize: '1rem',
             fontWeight: 600,
-            color: data.value < 0 ? '#3b82f6' : '#1A8F89',
+            color: data.value < -40 ? '#dc2626' : data.value < -20 ? '#f59e0b' : '#1A8F89',
           }}
         >
           {data.value.toFixed(1)}°C
@@ -149,8 +227,21 @@ const CustomTooltip = ({ active, payload }) => {
 
 const CustomDot = (props) => {
   const { cx, cy, payload, selectedPointTime, onClick } = props;
+  
+  // Don't render dot for null values
+  if (payload.isNull || payload.temperature === null) {
+    return null;
+  }
+  
   const isSelected = selectedPointTime && payload.time === selectedPointTime;
-  const isNegative = payload.temperature < 0;
+  const temp = payload.temperature;
+  
+  // Color based on temperature thresholds for hail risk
+  const getColor = () => {
+    if (temp <= -40) return '#dc2626'; // High risk - red
+    if (temp <= -20) return '#f59e0b'; // Moderate risk - orange
+    return '#1A8F89'; // Low risk - teal
+  };
   
   const handleDotClick = (e) => {
     e.stopPropagation();
@@ -185,7 +276,7 @@ const CustomDot = (props) => {
       cx={cx}
       cy={cy}
       r={4}
-      fill={isNegative ? '#3b82f6' : '#1A8F89'}
+      fill={getColor()}
       stroke="#ffffff"
       strokeWidth={1.5}
       onClick={handleDotClick}
@@ -197,21 +288,56 @@ const CustomDot = (props) => {
 const TemperatureChart = forwardRef(({ data, selectedDate, selectedPointTime, onPointClick }, ref) => {
   if (!data || !data.data) return null;
 
-  const chartData = data.data.map((item) => {
-    const date = new Date(item.time);
-    return {
-      time: item.time,
-      temperature: item.value,
-      displayTime: date.toLocaleTimeString('es-AR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      displayDate: date.toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: '2-digit',
-      }),
-    };
-  });
+  // Transform data and identify null regions
+  const { chartData, nullRegions } = useMemo(() => {
+    const processedData = data.data.map((item) => {
+      const date = new Date(item.time);
+      return {
+        time: item.time,
+        temperature: item.value,
+        isNull: item.value === null,
+        displayTime: date.toLocaleTimeString('es-AR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        displayDate: date.toLocaleDateString('es-AR', {
+          day: '2-digit',
+          month: '2-digit',
+        }),
+      };
+    });
+
+    // Find consecutive null regions for shading
+    const regions = [];
+    let regionStart = null;
+    
+    processedData.forEach((item, index) => {
+      if (item.isNull) {
+        if (regionStart === null) {
+          regionStart = item.time;
+        }
+      } else {
+        if (regionStart !== null) {
+          // End of null region
+          regions.push({
+            start: regionStart,
+            end: processedData[index - 1].time,
+          });
+          regionStart = null;
+        }
+      }
+    });
+    
+    // Handle case where data ends with nulls
+    if (regionStart !== null) {
+      regions.push({
+        start: regionStart,
+        end: processedData[processedData.length - 1].time,
+      });
+    }
+
+    return { chartData: processedData, nullRegions: regions };
+  }, [data]);
 
   const formatXAxis = (value) => {
     const date = new Date(value);
@@ -253,36 +379,37 @@ const TemperatureChart = forwardRef(({ data, selectedDate, selectedPointTime, on
 
   const handleChartClick = (data) => {
     if (data && data.activePayload && data.activePayload.length > 0) {
-      const clickedTime = data.activePayload[0].payload.time;
-      onPointClick(clickedTime);
+      const clickedData = data.activePayload[0].payload;
+      // Don't allow clicking on null points
+      if (!clickedData.isNull && clickedData.temperature !== null) {
+        onPointClick(clickedData.time);
+      }
     }
   };
 
   const handleDotClickWrapper = (payload) => {
-    if (payload && payload.time) {
+    if (payload && payload.time && !payload.isNull) {
       onPointClick(payload.time);
     }
   };
 
   const handleLearnMore = () => {
-    window.open('', '_blank');
+    // GOES-16 satellite info
+    const url = 'https://www.goes.noaa.gov/';
+    if (window.avt && window.avt.interface && window.avt.interface.openWindow) {
+      window.avt.interface.openWindow(url);
+    } else {
+      window.open(url, '_blank');
+    }
   };
+
+  // Check if there are any null regions
+  const hasNullRegions = nullRegions.length > 0;
 
   return (
     <ChartContainer ref={ref}>
       <ChartHeader>
-        <ChartTitleSection>
-          <ChartTitle>Temperatura tope de nube ((°C)/Tiempo)</ChartTitle>
-          <InfoText>
-            Haga click en un punto para ver los próximos 4 horas en la tabla
-          </InfoText>
-        </ChartTitleSection>
-        <DataSourceSection>
-          <DataSourceLabel>GOES16</DataSourceLabel>
-          <LearnMoreLink onClick={handleLearnMore}>
-            Conocer más
-          </LearnMoreLink>
-        </DataSourceSection>
+        <ChartTitle>Temperatura de Tope de Nube (°C)</ChartTitle>
       </ChartHeader>
 
       <Box sx={{ outline: 'none', '&:focus': { outline: 'none' }, '& *': { outline: 'none !important' } }}>
@@ -294,6 +421,21 @@ const TemperatureChart = forwardRef(({ data, selectedDate, selectedPointTime, on
             style={{ outline: 'none' }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            
+            {/* Render shaded areas for null (no cloud) regions */}
+            {nullRegions.map((region, index) => (
+              <ReferenceArea
+                key={index}
+                x1={region.start}
+                x2={region.end}
+                fill="#bae6fd"
+                fillOpacity={0.4}
+                stroke="#7dd3fc"
+                strokeOpacity={0.6}
+                strokeDasharray="3 3"
+              />
+            ))}
+            
             <XAxis
               dataKey="time"
               ticks={customTicks}
@@ -325,18 +467,80 @@ const TemperatureChart = forwardRef(({ data, selectedDate, selectedPointTime, on
               }}
             />
             <Tooltip content={<CustomTooltip />} />
-            <ReferenceLine y={0} stroke="#6b7280" strokeDasharray="3 3" />
+            
+            {/* Reference lines for risk thresholds */}
+            <ReferenceLine 
+              y={-40} 
+              stroke="#dc2626" 
+              strokeDasharray="5 5" 
+              strokeWidth={1.5}
+              label={{ 
+                value: '-40°C (Alto riesgo)', 
+                position: 'right', 
+                fill: '#dc2626',
+                fontSize: 10,
+                fontFamily: "'Poppins', sans-serif",
+              }}
+            />
+            <ReferenceLine 
+              y={-20} 
+              stroke="#f59e0b" 
+              strokeDasharray="5 5" 
+              strokeWidth={1.5}
+              label={{ 
+                value: '-20°C (Riesgo moderado)', 
+                position: 'right', 
+                fill: '#f59e0b',
+                fontSize: 10,
+                fontFamily: "'Poppins', sans-serif",
+              }}
+            />
+            
             <Line
               type="monotone"
               dataKey="temperature"
               stroke="#1A8F89"
               strokeWidth={2}
-              dot={(props) => <CustomDot {...props} selectedPointTime={selectedPointTime} onClick={handleDotClickWrapper} />}
+              connectNulls={false}
+              dot={(props) => (
+                <CustomDot 
+                  {...props} 
+                  selectedPointTime={selectedPointTime} 
+                  onClick={handleDotClickWrapper} 
+                />
+              )}
               activeDot={false}
             />
           </LineChart>
         </ResponsiveContainer>
       </Box>
+
+      <ChartFooter>
+        {/* Legend */}
+        <LegendContainer>
+          <LegendItem>
+            <LegendColor color="#1A8F89" />
+            <LegendText>Temperatura de tope de nube</LegendText>
+          </LegendItem>
+          {hasNullRegions && (
+            <LegendItem>
+              <LegendColor color="#bae6fd" isArea />
+              <LegendText>Sin nubes detectadas</LegendText>
+            </LegendItem>
+          )}
+        </LegendContainer>
+
+        <InfoText>
+          Haga click en un punto para ver las próximas 4 horas en la tabla
+        </InfoText>
+        
+        <DataSourceSection>
+          <DataSourceLabel>Fuente:</DataSourceLabel>
+          <LearnMoreLink onClick={handleLearnMore}>
+            GOES-16
+          </LearnMoreLink>
+        </DataSourceSection>
+      </ChartFooter>
     </ChartContainer>
   );
 });

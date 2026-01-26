@@ -1,35 +1,35 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import App from './App.jsx';
-import './index.css';
+import "./assets/fonts.css";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
 
-// Initialize SDK when ready
-const initializeSDK = () => {
-  if (typeof avt !== 'undefined' && avt.interface) {
-    // Set window size to 800x500
-    avt.interface.setWindow({
-      width: '800px',
-      height: '500px',
-    });
-    console.log('SDK initialized - Window size set to 800x500');
-  } else {
-    console.warn('Auravant SDK not available');
+const loadExt = () => {
+  console.log('=== SDK Ready - Initial Check ===');
+  console.log('avt exists:', typeof avt !== 'undefined');
+  console.log('avt.platform:', avt?.platform);
+  console.log('window.token:', typeof window.token !== 'undefined' ? 'exists' : 'undefined');
+  console.log('global token:', typeof token !== 'undefined' ? 'exists' : 'undefined');
+  
+  // Log all global variables from SDK
+  if (typeof avt !== 'undefined') {
+    console.log('avt keys:', Object.keys(avt));
   }
+
+  // Set the window size
+  avt.interface.setWindow({
+    width: "900px",
+    height: "700px"
+  });
+  
+  ReactDOM.createRoot(document.getElementById("root")).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
 };
 
-// Listen for SDK ready event
-window.addEventListener('readySDK', () => {
-  console.log('Auravant SDK Ready');
-  initializeSDK();
-});
-
-// Also try to initialize if SDK is already loaded
 if (typeof avt !== 'undefined') {
-  initializeSDK();
+  loadExt();
+} else {
+  window.addEventListener("readySDK", loadExt);
 }
-
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-);

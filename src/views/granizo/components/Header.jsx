@@ -80,10 +80,13 @@ const LogoSection = styled(Box)(({ theme }) => ({
   },
 }));
 
-const Logo = styled("img")(({ theme }) => ({
+const LogoPlaceholder = styled(Box)(({ theme }) => ({
   width: "100px",
   height: "91px",
-  objectFit: "contain",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: "8px",
   flexShrink: 0,
 
   [theme.breakpoints.down("md")]: {
@@ -142,7 +145,7 @@ const SectionLabel = styled(Typography)(({ theme }) => ({
 }));
 
 const StyledDatePicker = styled(DatePicker)(({ theme }) => ({
-  minWidth: "180px",
+  minWidth: "140px",
 
   "& .MuiInputBase-root": {
     backgroundColor: "#37474f",
@@ -156,19 +159,11 @@ const StyledDatePicker = styled(DatePicker)(({ theme }) => ({
 
     "&:hover": {
       borderColor: "#1A8F89",
-
-      "& .MuiOutlinedInput-notchedOutline": {
-        border: "none",
-      },
     },
 
     "&.Mui-focused": {
       borderColor: "#1A8F89",
       boxShadow: "0 0 0 3px rgba(26, 143, 137, 0.1)",
-
-      "& .MuiOutlinedInput-notchedOutline": {
-        border: "none",
-      },
     },
   },
 
@@ -209,8 +204,8 @@ const StyledDatePicker = styled(DatePicker)(({ theme }) => ({
 
   [theme.breakpoints.down("md")]: {
     flex: "0 1 auto",
-    minWidth: "120px",
-    maxWidth: "150px",
+    minWidth: "100px",
+    maxWidth: "130px",
   },
 }));
 
@@ -228,7 +223,145 @@ const ButtonGroup = styled(Box)(({ theme }) => ({
   },
 }));
 
-function Header({ onCalculate, onDownloadPDF, onBack, loading, hasData }) {
+const pickerPopperSx = {
+  "& .MuiPaper-root": {
+    backgroundColor: "#263238",
+    color: "#ffffff",
+    borderRadius: "16px",
+    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.3)",
+    border: "2px solid #455a64",
+    fontFamily: "'Poppins', sans-serif",
+
+    "& .MuiPickersCalendarHeader-root": {
+      color: "#ffffff",
+      paddingTop: "1rem",
+      paddingLeft: "1rem",
+      paddingRight: "1rem",
+      marginBottom: "0.5rem",
+    },
+
+    "& .MuiPickersCalendarHeader-label": {
+      fontFamily: "'Poppins', sans-serif",
+      fontSize: "1rem",
+      fontWeight: 600,
+      color: "#ffffff",
+    },
+
+    "& .MuiPickersArrowSwitcher-button": {
+      color: "#9ca3af",
+
+      "&:hover": {
+        backgroundColor: "rgba(26, 143, 137, 0.1)",
+        color: "#1A8F89",
+      },
+    },
+
+    "& .MuiDayCalendar-header": {
+      paddingLeft: "1rem",
+      paddingRight: "1rem",
+    },
+
+    "& .MuiDayCalendar-weekDayLabel": {
+      fontFamily: "'Poppins', sans-serif",
+      fontSize: "0.75rem",
+      fontWeight: 500,
+      color: "#9ca3af",
+    },
+
+    "& .MuiPickersDay-root": {
+      fontFamily: "'Poppins', sans-serif",
+      fontSize: "0.875rem",
+      color: "#ffffff",
+
+      "&:hover": {
+        backgroundColor: "rgba(26, 143, 137, 0.2)",
+      },
+
+      "&.Mui-selected": {
+        backgroundColor: "#1A8F89",
+        color: "#ffffff",
+        fontWeight: 600,
+
+        "&:hover": {
+          backgroundColor: "#157f7a",
+        },
+      },
+
+      "&.MuiPickersDay-today": {
+        border: "2px solid #1A8F89",
+        backgroundColor: "transparent",
+
+        "&:not(.Mui-selected)": {
+          color: "#1A8F89",
+        },
+      },
+    },
+
+    "& .MuiPickersDay-root.Mui-disabled": {
+      color: "#4a5568",
+    },
+
+    "& .MuiPickersYear-yearButton": {
+      fontFamily: "'Poppins', sans-serif",
+      fontSize: "0.875rem",
+      color: "#ffffff",
+
+      "&:hover": {
+        backgroundColor: "rgba(26, 143, 137, 0.2)",
+      },
+
+      "&.Mui-selected": {
+        backgroundColor: "#1A8F89",
+        color: "#ffffff",
+        fontWeight: 600,
+
+        "&:hover": {
+          backgroundColor: "#157f7a",
+        },
+      },
+    },
+
+    "& .MuiPickersMonth-monthButton": {
+      fontFamily: "'Poppins', sans-serif",
+      fontSize: "0.875rem",
+      color: "#ffffff",
+
+      "&:hover": {
+        backgroundColor: "rgba(26, 143, 137, 0.2)",
+      },
+
+      "&.Mui-selected": {
+        backgroundColor: "#1A8F89",
+        color: "#ffffff",
+        fontWeight: 600,
+
+        "&:hover": {
+          backgroundColor: "#157f7a",
+        },
+      },
+    },
+
+    "& .MuiDialogActions-root": {
+      padding: "1rem",
+
+      "& .MuiButton-root": {
+        fontFamily: "'Poppins', sans-serif",
+        fontSize: "0.875rem",
+        color: "#1A8F89",
+        textTransform: "none",
+
+        "&:hover": {
+          backgroundColor: "rgba(26, 143, 137, 0.1)",
+        },
+      },
+    },
+  },
+};
+
+// Minimum date for API data availability (2025-04-07)
+const MIN_DATE = dayjs('2025-04-07');
+
+function Header({ onCalculate, onDownloadPDF, onBack, loading, exporting, hasData, fieldSelected, checkingField }) {
   const [selectedDate, setSelectedDate] = useState(null);
 
   const handleDateChange = (newDate) => {
@@ -236,7 +369,7 @@ function Header({ onCalculate, onDownloadPDF, onBack, loading, hasData }) {
   };
 
   const handleCalculateClick = () => {
-    if (selectedDate) {
+    if (selectedDate && fieldSelected) {
       onCalculate(selectedDate.toDate());
     }
   };
@@ -245,11 +378,33 @@ function Header({ onCalculate, onDownloadPDF, onBack, loading, hasData }) {
     return dayjs();
   };
 
+  const canCalculate = selectedDate && !loading && fieldSelected && !checkingField;
+
+  // Button text based on state
+  const getCalculateButtonText = () => {
+    if (loading) return "Calculando...";
+    if (checkingField) return "Verificando...";
+    if (!fieldSelected) return "Sin lote";
+    return "Calcular";
+  };
+
+  const getCalculateButtonIcon = () => {
+    if (loading || checkingField) return "hourglass_empty";
+    if (!fieldSelected) return "warning";
+    return "calculate";
+  };
+
   return (
     <HeaderContainer>
       {/* Mobile Layout */}
       <MobileTopRow>
-        <Logo src={Anorak_White_Granizo_NB} alt="Anorak" />
+        <LogoPlaceholder>
+          <img 
+            src={Anorak_White_Granizo_NB} 
+            alt="Granizo Logo" 
+            style={{ width: '80%', height: '80%', objectFit: 'contain' }} 
+          />
+        </LogoPlaceholder>
         <MobileCenterTitle>
           <Title>Granizo</Title>
         </MobileCenterTitle>
@@ -268,6 +423,7 @@ function Header({ onCalculate, onDownloadPDF, onBack, loading, hasData }) {
           <StyledDatePicker
             value={selectedDate}
             onChange={handleDateChange}
+            minDate={MIN_DATE}
             maxDate={getTodayDate()}
             format="DD/MM/YYYY"
             openTo="day"
@@ -287,140 +443,7 @@ function Header({ onCalculate, onDownloadPDF, onBack, loading, hasData }) {
                 readOnly: true,
               },
               popper: {
-                sx: {
-                  "& .MuiPaper-root": {
-                    backgroundColor: "#263238",
-                    color: "#ffffff",
-                    borderRadius: "16px",
-                    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.3)",
-                    border: "2px solid #455a64",
-                    fontFamily: "'Poppins', sans-serif",
-
-                    "& .MuiPickersCalendarHeader-root": {
-                      color: "#ffffff",
-                      paddingTop: "1rem",
-                      paddingLeft: "1rem",
-                      paddingRight: "1rem",
-                      marginBottom: "0.5rem",
-                    },
-
-                    "& .MuiPickersCalendarHeader-label": {
-                      fontFamily: "'Poppins', sans-serif",
-                      fontSize: "1rem",
-                      fontWeight: 600,
-                      color: "#ffffff",
-                    },
-
-                    "& .MuiPickersArrowSwitcher-button": {
-                      color: "#9ca3af",
-
-                      "&:hover": {
-                        backgroundColor: "rgba(26, 143, 137, 0.1)",
-                        color: "#1A8F89",
-                      },
-                    },
-
-                    "& .MuiDayCalendar-header": {
-                      paddingLeft: "1rem",
-                      paddingRight: "1rem",
-                    },
-
-                    "& .MuiDayCalendar-weekDayLabel": {
-                      fontFamily: "'Poppins', sans-serif",
-                      fontSize: "0.75rem",
-                      fontWeight: 500,
-                      color: "#9ca3af",
-                    },
-
-                    "& .MuiPickersDay-root": {
-                      fontFamily: "'Poppins', sans-serif",
-                      fontSize: "0.875rem",
-                      color: "#ffffff",
-
-                      "&:hover": {
-                        backgroundColor: "rgba(26, 143, 137, 0.2)",
-                      },
-
-                      "&.Mui-selected": {
-                        backgroundColor: "#1A8F89",
-                        color: "#ffffff",
-                        fontWeight: 600,
-
-                        "&:hover": {
-                          backgroundColor: "#157f7a",
-                        },
-                      },
-
-                      "&.MuiPickersDay-today": {
-                        border: "2px solid #1A8F89",
-                        backgroundColor: "transparent",
-
-                        "&:not(.Mui-selected)": {
-                          color: "#1A8F89",
-                        },
-                      },
-                    },
-
-                    "& .MuiPickersDay-root.Mui-disabled": {
-                      color: "#4a5568",
-                    },
-
-                    "& .MuiPickersYear-yearButton": {
-                      fontFamily: "'Poppins', sans-serif",
-                      fontSize: "0.875rem",
-                      color: "#ffffff",
-
-                      "&:hover": {
-                        backgroundColor: "rgba(26, 143, 137, 0.2)",
-                      },
-
-                      "&.Mui-selected": {
-                        backgroundColor: "#1A8F89",
-                        color: "#ffffff",
-                        fontWeight: 600,
-
-                        "&:hover": {
-                          backgroundColor: "#157f7a",
-                        },
-                      },
-                    },
-
-                    "& .MuiPickersMonth-monthButton": {
-                      fontFamily: "'Poppins', sans-serif",
-                      fontSize: "0.875rem",
-                      color: "#ffffff",
-
-                      "&:hover": {
-                        backgroundColor: "rgba(26, 143, 137, 0.2)",
-                      },
-
-                      "&.Mui-selected": {
-                        backgroundColor: "#1A8F89",
-                        color: "#ffffff",
-                        fontWeight: 600,
-
-                        "&:hover": {
-                          backgroundColor: "#157f7a",
-                        },
-                      },
-                    },
-
-                    "& .MuiDialogActions-root": {
-                      padding: "1rem",
-
-                      "& .MuiButton-root": {
-                        fontFamily: "'Poppins', sans-serif",
-                        fontSize: "0.875rem",
-                        color: "#1A8F89",
-                        textTransform: "none",
-
-                        "&:hover": {
-                          backgroundColor: "rgba(26, 143, 137, 0.1)",
-                        },
-                      },
-                    },
-                  },
-                },
+                sx: pickerPopperSx,
               },
             }}
           />
@@ -429,23 +452,28 @@ function Header({ onCalculate, onDownloadPDF, onBack, loading, hasData }) {
         <Button
           className="primary"
           onClick={handleCalculateClick}
-          text={loading ? "Calculando..." : "Calcular"}
-          icon={loading ? "hourglass_empty" : "calculate"}
-          disabled={!selectedDate || loading}
+          text={getCalculateButtonText()}
+          icon={getCalculateButtonIcon()}
+          disabled={!canCalculate}
         />
-
         <Button
           className="secondary"
           onClick={onDownloadPDF}
-          text="Copiar"
-          icon="content_copy"
-          disabled={!hasData}
+          text={exporting ? "..." : "PDF"}
+          icon="picture_as_pdf"
+          disabled={!hasData || exporting}
         />
       </MobileControlsRow>
 
       {/* Desktop Layout */}
       <LogoSection>
-        <Logo src={Anorak_White_Granizo_NB} alt="Anorak" />
+        <LogoPlaceholder>
+          <img 
+            src={Anorak_White_Granizo_NB} 
+            alt="Granizo Logo" 
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+          />
+        </LogoPlaceholder>
         <Title>Granizo</Title>
       </LogoSection>
 
@@ -456,6 +484,7 @@ function Header({ onCalculate, onDownloadPDF, onBack, loading, hasData }) {
             <StyledDatePicker
               value={selectedDate}
               onChange={handleDateChange}
+              minDate={MIN_DATE}
               maxDate={getTodayDate()}
               format="DD/MM/YYYY"
               openTo="day"
@@ -463,7 +492,7 @@ function Header({ onCalculate, onDownloadPDF, onBack, loading, hasData }) {
               desktopModeMediaQuery="@media (min-width: 0px)"
               slotProps={{
                 textField: {
-                  placeholder: "Seleccione una fecha",
+                  placeholder: "Seleccione fecha",
                   InputProps: {
                     sx: {
                       color: selectedDate ? "#ffffff" : "#9ca3af",
@@ -475,140 +504,7 @@ function Header({ onCalculate, onDownloadPDF, onBack, loading, hasData }) {
                   readOnly: true,
                 },
                 popper: {
-                  sx: {
-                    "& .MuiPaper-root": {
-                      backgroundColor: "#263238",
-                      color: "#ffffff",
-                      borderRadius: "16px",
-                      boxShadow: "0 8px 24px rgba(0, 0, 0, 0.3)",
-                      border: "2px solid #455a64",
-                      fontFamily: "'Poppins', sans-serif",
-
-                      "& .MuiPickersCalendarHeader-root": {
-                        color: "#ffffff",
-                        paddingTop: "1rem",
-                        paddingLeft: "1rem",
-                        paddingRight: "1rem",
-                        marginBottom: "0.5rem",
-                      },
-
-                      "& .MuiPickersCalendarHeader-label": {
-                        fontFamily: "'Poppins', sans-serif",
-                        fontSize: "1rem",
-                        fontWeight: 600,
-                        color: "#ffffff",
-                      },
-
-                      "& .MuiPickersArrowSwitcher-button": {
-                        color: "#9ca3af",
-
-                        "&:hover": {
-                          backgroundColor: "rgba(26, 143, 137, 0.1)",
-                          color: "#1A8F89",
-                        },
-                      },
-
-                      "& .MuiDayCalendar-header": {
-                        paddingLeft: "1rem",
-                        paddingRight: "1rem",
-                      },
-
-                      "& .MuiDayCalendar-weekDayLabel": {
-                        fontFamily: "'Poppins', sans-serif",
-                        fontSize: "0.75rem",
-                        fontWeight: 500,
-                        color: "#9ca3af",
-                      },
-
-                      "& .MuiPickersDay-root": {
-                        fontFamily: "'Poppins', sans-serif",
-                        fontSize: "0.875rem",
-                        color: "#ffffff",
-
-                        "&:hover": {
-                          backgroundColor: "rgba(26, 143, 137, 0.2)",
-                        },
-
-                        "&.Mui-selected": {
-                          backgroundColor: "#1A8F89",
-                          color: "#ffffff",
-                          fontWeight: 600,
-
-                          "&:hover": {
-                            backgroundColor: "#157f7a",
-                          },
-                        },
-
-                        "&.MuiPickersDay-today": {
-                          border: "2px solid #1A8F89",
-                          backgroundColor: "transparent",
-
-                          "&:not(.Mui-selected)": {
-                            color: "#1A8F89",
-                          },
-                        },
-                      },
-
-                      "& .MuiPickersDay-root.Mui-disabled": {
-                        color: "#4a5568",
-                      },
-
-                      "& .MuiPickersYear-yearButton": {
-                        fontFamily: "'Poppins', sans-serif",
-                        fontSize: "0.875rem",
-                        color: "#ffffff",
-
-                        "&:hover": {
-                          backgroundColor: "rgba(26, 143, 137, 0.2)",
-                        },
-
-                        "&.Mui-selected": {
-                          backgroundColor: "#1A8F89",
-                          color: "#ffffff",
-                          fontWeight: 600,
-
-                          "&:hover": {
-                            backgroundColor: "#157f7a",
-                          },
-                        },
-                      },
-
-                      "& .MuiPickersMonth-monthButton": {
-                        fontFamily: "'Poppins', sans-serif",
-                        fontSize: "0.875rem",
-                        color: "#ffffff",
-
-                        "&:hover": {
-                          backgroundColor: "rgba(26, 143, 137, 0.2)",
-                        },
-
-                        "&.Mui-selected": {
-                          backgroundColor: "#1A8F89",
-                          color: "#ffffff",
-                          fontWeight: 600,
-
-                          "&:hover": {
-                            backgroundColor: "#157f7a",
-                          },
-                        },
-                      },
-
-                      "& .MuiDialogActions-root": {
-                        padding: "1rem",
-
-                        "& .MuiButton-root": {
-                          fontFamily: "'Poppins', sans-serif",
-                          fontSize: "0.875rem",
-                          color: "#1A8F89",
-                          textTransform: "none",
-
-                          "&:hover": {
-                            backgroundColor: "rgba(26, 143, 137, 0.1)",
-                          },
-                        },
-                      },
-                    },
-                  },
+                  sx: pickerPopperSx,
                 },
               }}
             />
@@ -618,17 +514,19 @@ function Header({ onCalculate, onDownloadPDF, onBack, loading, hasData }) {
         <Button
           className="primary"
           onClick={handleCalculateClick}
-          text={loading ? "Calculando..." : "Calcular"}
-          icon={loading ? "hourglass_empty" : "calculate"}
-          disabled={!selectedDate || loading}
+          text={getCalculateButtonText()}
+          icon={getCalculateButtonIcon()}
+          disabled={!canCalculate}
         />
+
         <Button
           className="secondary"
           onClick={onDownloadPDF}
-          text="Copiar"
-          icon="content_copy"
-          disabled={!hasData}
+          text={exporting ? "Exportando..." : "Descargar PDF"}
+          icon="picture_as_pdf"
+          disabled={!hasData || exporting}
         />
+
         <ButtonGroup>
           {onBack && (
             <Button

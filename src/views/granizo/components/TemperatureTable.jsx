@@ -83,23 +83,70 @@ const TableHeaderCell = styled('th')({
   },
 });
 
-const TableCell = styled('td')(({ isDateCell, isCold, isHighlighted }) => ({
+const TableCell = styled('td')(({ isDateCell, isCold, isHighlighted, isNoCloud, isHighRisk, isModerateRisk }) => ({
   fontFamily: "'Poppins', sans-serif",
   fontSize: '0.875rem',
   fontWeight: isDateCell ? 600 : 400,
-  color: isCold ? '#3b82f6' : '#263238',
+  color: isNoCloud 
+    ? '#0284c7' 
+    : isHighRisk 
+      ? '#dc2626' 
+      : isModerateRisk 
+        ? '#d97706' 
+        : isCold 
+          ? '#3b82f6' 
+          : '#263238',
   backgroundColor: isHighlighted 
     ? '#fef3c7' 
-    : isCold 
-      ? '#eff6ff' 
-      : 'transparent',
+    : isNoCloud
+      ? '#e0f2fe'
+      : isHighRisk
+        ? '#fef2f2'
+        : isModerateRisk
+          ? '#fffbeb'
+          : isCold 
+            ? '#eff6ff' 
+            : 'transparent',
   padding: '0.625rem 0.75rem',
   textAlign: isDateCell ? 'left' : 'center',
   borderRight: isDateCell ? '1px solid #e5e7eb' : 'none',
   transition: 'background-color 0.2s ease',
 }));
 
+const NoCloudBadge = styled(Box)({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '0.25rem',
+  padding: '0.125rem 0.5rem',
+  borderRadius: '4px',
+  backgroundColor: '#bae6fd',
+  border: '1px solid #7dd3fc',
+  fontSize: '0.75rem',
+  fontWeight: 500,
+  color: '#0369a1',
+});
+
 const columnHelper = createColumnHelper();
+
+// Helper function to render cell value
+const renderCellValue = (point) => {
+  if (!point) return '-';
+  
+  // Check if it's a null value (no clouds)
+  if (point.value === null) {
+    return (
+      <NoCloudBadge>
+        <span className="material-symbols-outlined" style={{ fontSize: '0.875rem' }}>
+          cloud_off
+        </span>
+        Sin nubes
+      </NoCloudBadge>
+    );
+  }
+  
+  return `${point.value.toFixed(1)}°C`;
+};
 
 const TemperatureTable = forwardRef(({ data, selectedDate, selectedPointTime }, ref) => {
   if (!data || !data.data) return null;
@@ -110,13 +157,15 @@ const TemperatureTable = forwardRef(({ data, selectedDate, selectedPointTime }, 
     const selectedIndex = data.data.findIndex(item => item.time === selectedPointTime);
     if (selectedIndex === -1) return [];
 
-    const next4Hours = data.data.slice(selectedIndex, selectedIndex + 16);
+    // Get next 24 data points (4 hours at 10-minute intervals)
+    const next4Hours = data.data.slice(selectedIndex, selectedIndex + 24);
     
     if (next4Hours.length === 0) return [];
 
+    // Group into rows of 6 (1 hour each at 10-minute intervals)
     const rows = [];
-    for (let i = 0; i < 17; i += 4) {
-      const hourData = next4Hours.slice(i, i + 4);
+    for (let i = 0; i < 24; i += 6) {
+      const hourData = next4Hours.slice(i, i + 6);
       if (hourData.length === 0) continue;
 
       const firstPoint = new Date(hourData[0].time);
@@ -131,7 +180,7 @@ const TemperatureTable = forwardRef(({ data, selectedDate, selectedPointTime }, 
         isStartPoint: i === 0,
       };
 
-      for (let idx = 0; idx < 4; idx++) {
+      for (let idx = 0; idx < 6; idx++) {
         if (hourData[idx]) {
           row[`point${idx}`] = {
             value: hourData[idx].value,
@@ -174,31 +223,27 @@ const TemperatureTable = forwardRef(({ data, selectedDate, selectedPointTime }, 
       }),
       columnHelper.accessor('point0', {
         header: '+0 min',
-        cell: (info) => {
-          const point = info.getValue();
-          return point ? `${point.value.toFixed(1)}°C` : '-';
-        },
+        cell: (info) => renderCellValue(info.getValue()),
       }),
       columnHelper.accessor('point1', {
-        header: '+15 min',
-        cell: (info) => {
-          const point = info.getValue();
-          return point ? `${point.value.toFixed(1)}°C` : '-';
-        },
+        header: '+10 min',
+        cell: (info) => renderCellValue(info.getValue()),
       }),
       columnHelper.accessor('point2', {
-        header: '+30 min',
-        cell: (info) => {
-          const point = info.getValue();
-          return point ? `${point.value.toFixed(1)}°C` : '-';
-        },
+        header: '+20 min',
+        cell: (info) => renderCellValue(info.getValue()),
       }),
       columnHelper.accessor('point3', {
-        header: '+45 min',
-        cell: (info) => {
-          const point = info.getValue();
-          return point ? `${point.value.toFixed(1)}°C` : '-';
-        },
+        header: '+30 min',
+        cell: (info) => renderCellValue(info.getValue()),
+      }),
+      columnHelper.accessor('point4', {
+        header: '+40 min',
+        cell: (info) => renderCellValue(info.getValue()),
+      }),
+      columnHelper.accessor('point5', {
+        header: '+50 min',
+        cell: (info) => renderCellValue(info.getValue()),
       }),
     ],
     []
@@ -213,9 +258,9 @@ const TemperatureTable = forwardRef(({ data, selectedDate, selectedPointTime }, 
   return (
     <TableContainer ref={ref}>
       <TableHeader>
-        <TableTitle>Tabla de valores (intervalos de 15 minutos)</TableTitle>
+        <TableTitle>Tabla de valores (intervalos de 10 minutos)</TableTitle>
         <TableSubtitle>
-          Próximos 4 horas desde el punto seleccionado
+          Próximas 4 horas desde el punto seleccionado
         </TableSubtitle>
         {!selectedPointTime && (
           <InfoText>
@@ -271,7 +316,11 @@ const TemperatureTable = forwardRef(({ data, selectedDate, selectedPointTime }, 
                 {row.getVisibleCells().map((cell, index) => {
                   const isDateCell = index === 0;
                   const point = cell.getValue();
-                  const isCold = !isDateCell && point && typeof point.value === 'number' && point.value < 0;
+                  const isNoCloud = !isDateCell && point && point.value === null;
+                  const temp = !isDateCell && point && typeof point.value === 'number' ? point.value : null;
+                  const isCold = temp !== null && temp < 0;
+                  const isHighRisk = temp !== null && temp <= -40;
+                  const isModerateRisk = temp !== null && temp > -40 && temp <= -20;
                   const isHighlighted = row.original.isStartPoint && index === 0;
                   
                   return (
@@ -280,6 +329,9 @@ const TemperatureTable = forwardRef(({ data, selectedDate, selectedPointTime }, 
                       isDateCell={isDateCell}
                       isCold={isCold}
                       isHighlighted={isHighlighted}
+                      isNoCloud={isNoCloud}
+                      isHighRisk={isHighRisk}
+                      isModerateRisk={isModerateRisk}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
