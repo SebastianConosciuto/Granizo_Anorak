@@ -5,6 +5,12 @@ import Header from './components/Header';
 import TemperatureChart from './components/TemperatureChart';
 import TemperatureTable from './components/TemperatureTable';
 import { exportToPDF } from '../../utils/exportUtils';
+import {
+  getTimeZone,
+  getUtcDateRangeForLocalDay,
+  localDateKey,
+  inZone,
+} from '../../utils/timezone';
 
 const ViewContainer = styled(Box)({
   display: 'flex',
@@ -41,17 +47,11 @@ const parseWKTPoint = (wktPoint) => {
 };
 
 // Fetch cloud top temperature data from API
-const fetchCloudTemperatureData = async (lat, lon, date, token) => {
-  // Format date as YYYY-MM-DD
-  const formatDate = (d) => {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const dateStr = formatDate(date);
-  const url = `https://clima.auravant.com/api/data/point?variable=cloud_temp&lat=${lat}&lon=${lon}&start_date=${dateStr}&end_date=${dateStr}&resolution=max`;
+const fetchCloudTemperatureData = async (lat, lon, date, token, timeZone) => {
+  // Request the UTC date range that fully covers the selected field-local day.
+  // For negative offsets (e.g. UTC-3) the local day spans two UTC dates.
+  const { startDate, endDate } = getUtcDateRangeForLocalDay(date, timeZone);
+  const url = `https://clima.auravant.com/api/data/point?variable=cloud_temp&lat=${lat}&lon=${lon}&start_date=${startDate}&end_date=${endDate}&resolution=max`;
 
   console.log('Fetching cloud temperature data from:', url);
   console.log('Using token:', token ? `${token.substring(0, 30)}...` : 'NO TOKEN');
@@ -259,10 +259,17 @@ function GranizoView() {
 
       setOriginalCoordinate({ lat, lon });
 
+      // Resolve the field's local timezone from its coordinates (UTC-3 for
+      // lat -36 / lon -62). All hours are shown/requested in this zone.
+      const timeZone = getTimeZone(lat, lon);
+
       // Fetch data from API
       try {
-        const apiData = await fetchCloudTemperatureData(lat, lon, date, token);
-        
+        const apiData = await fetchCloudTemperatureData(lat, lon, date, token, timeZone);
+
+        // One-time diagnostic: surface any timezone/offset field the API returns.
+        console.log('API response keys:', Object.keys(apiData || {}));
+
         // Check if no cloud data was available
         if (apiData.noData) {
           setNoCloudData(true);
@@ -270,14 +277,22 @@ function GranizoView() {
           return;
         }
 
+        // Keep only samples that fall within the selected field-local day, so
+        // the chart/table show exactly that calendar day (not a shifted UTC day).
+        const { pickedDay } = getUtcDateRangeForLocalDay(date, timeZone);
+        const dayData = Array.isArray(apiData.data)
+          ? apiData.data.filter((item) => localDateKey(item.time, timeZone) === pickedDay)
+          : apiData.data;
+
         // Process the API response
         const processedData = {
-          data: apiData.data,
+          data: dayData,
           latitude: apiData.latitude,
           longitude: apiData.longitude,
           resolution: apiData.resolution,
           units: apiData.units,
           variable: apiData.variable,
+          timeZone,
         };
 
         setTemperatureData(processedData);
@@ -307,8 +322,8 @@ function GranizoView() {
     setExporting(true);
     
     try {
-      const dateStr = selectedDate 
-        ? new Date(selectedDate).toISOString().split('T')[0]
+      const dateStr = selectedDate
+        ? getUtcDateRangeForLocalDay(selectedDate, temperatureData?.timeZone).pickedDay
         : 'fecha';
 
       const filename = `granizo_${dateStr}`;

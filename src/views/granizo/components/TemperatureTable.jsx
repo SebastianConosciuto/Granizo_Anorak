@@ -7,6 +7,7 @@ import {
   flexRender,
   createColumnHelper,
 } from '@tanstack/react-table';
+import { formatDateTime } from '../../../utils/timezone';
 
 const TableContainer = styled(Box)({
   backgroundColor: '#ffffff',
@@ -151,6 +152,9 @@ const renderCellValue = (point) => {
 const TemperatureTable = forwardRef(({ data, selectedDate, selectedPointTime }, ref) => {
   if (!data || !data.data) return null;
 
+  // Field-local timezone resolved from the coordinates (e.g. UTC-3).
+  const tz = data.timeZone;
+
   const tableData = useMemo(() => {
     if (!selectedPointTime) return [];
 
@@ -168,15 +172,8 @@ const TemperatureTable = forwardRef(({ data, selectedDate, selectedPointTime }, 
       const hourData = next4Hours.slice(i, i + 6);
       if (hourData.length === 0) continue;
 
-      const firstPoint = new Date(hourData[0].time);
       const row = {
-        time: firstPoint.toLocaleString('es-AR', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
+        time: formatDateTime(hourData[0].time, tz),
         isStartPoint: i === 0,
       };
 
@@ -269,13 +266,7 @@ const TemperatureTable = forwardRef(({ data, selectedDate, selectedPointTime }, 
         )}
         {selectedPointTime && (
           <InfoText>
-            Mostrando datos desde: {new Date(selectedPointTime).toLocaleString('es-AR', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
+            Mostrando datos desde: {formatDateTime(selectedPointTime, tz)}
           </InfoText>
         )}
       </TableHeader>

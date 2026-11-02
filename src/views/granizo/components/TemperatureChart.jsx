@@ -1,6 +1,7 @@
 import React, { useMemo, forwardRef } from 'react';
 import { Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { inZone, formatTime, formatDateShort, formatDateShortYear, getOffsetLabel } from '../../../utils/timezone';
 import {
   LineChart,
   Line,
@@ -112,22 +113,14 @@ const LegendText = styled(Typography)({
   color: '#6b7280',
 });
 
-const CustomTooltip = ({ active, payload }) => {
+const CustomTooltip = ({ active, payload, tz }) => {
   if (active && payload && payload.length) {
     const data = payload[0];
-    
+
     // Check if this is a null (no cloud) point
     if (data.payload.isNull) {
-      const date = new Date(data.payload.time);
-      const formattedDate = date.toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-      const formattedTime = date.toLocaleTimeString('es-AR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      const formattedDate = inZone(data.payload.time, tz).format('DD/MM/YYYY');
+      const formattedTime = formatTime(data.payload.time, tz);
 
       return (
         <Box
@@ -168,16 +161,8 @@ const CustomTooltip = ({ active, payload }) => {
       );
     }
 
-    const date = new Date(data.payload.time);
-    const formattedDate = date.toLocaleDateString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-    const formattedTime = date.toLocaleTimeString('es-AR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const formattedDate = inZone(data.payload.time, tz).format('DD/MM/YYYY');
+    const formattedTime = formatTime(data.payload.time, tz);
 
     return (
       <Box
@@ -288,22 +273,18 @@ const CustomDot = (props) => {
 const TemperatureChart = forwardRef(({ data, selectedDate, selectedPointTime, onPointClick }, ref) => {
   if (!data || !data.data) return null;
 
+  // Field-local timezone resolved from the coordinates (e.g. UTC-3).
+  const tz = data.timeZone;
+
   // Transform data and identify null regions
   const { chartData, nullRegions } = useMemo(() => {
     const processedData = data.data.map((item) => {
-      const date = new Date(item.time);
       return {
         time: item.time,
         temperature: item.value,
         isNull: item.value === null,
-        displayTime: date.toLocaleTimeString('es-AR', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-        displayDate: date.toLocaleDateString('es-AR', {
-          day: '2-digit',
-          month: '2-digit',
-        }),
+        displayTime: formatTime(item.time, tz),
+        displayDate: formatDateShort(item.time, tz),
       };
     });
 
@@ -340,42 +321,35 @@ const TemperatureChart = forwardRef(({ data, selectedDate, selectedPointTime, on
   }, [data]);
 
   const formatXAxis = (value) => {
-    const date = new Date(value);
-    const hour = date.getHours();
-    const minute = date.getMinutes();
+    const date = inZone(value, tz);
+    const hour = date.hour();
+    const minute = date.minute();
 
     if (hour === 0 && minute === 0) {
-      return date.toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: '2-digit',
-      });
-    } 
+      return formatDateShortYear(value, tz);
+    }
     else if (minute === 0 && hour % 6 === 0) {
-      return date.toLocaleTimeString('es-AR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      return formatTime(value, tz);
     }
     return '';
   };
 
   const customTicks = useMemo(() => {
     if (!chartData || chartData.length === 0) return [];
-    
+
     const ticks = [];
     chartData.forEach((item) => {
-      const date = new Date(item.time);
-      const hour = date.getHours();
-      const minute = date.getMinutes();
-      
+      const date = inZone(item.time, tz);
+      const hour = date.hour();
+      const minute = date.minute();
+
       if ((hour === 0 && minute === 0) || (minute === 0 && hour % 6 === 0)) {
         ticks.push(item.time);
       }
     });
-    
+
     return ticks;
-  }, [chartData]);
+  }, [chartData, tz]);
 
   const handleChartClick = (data) => {
     if (data && data.activePayload && data.activePayload.length > 0) {
@@ -466,7 +440,7 @@ const TemperatureChart = forwardRef(({ data, selectedDate, selectedPointTime, on
                 },
               }}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip tz={tz} />} />
             
             {/* Reference lines for risk thresholds */}
             <ReferenceLine 
@@ -533,7 +507,11 @@ const TemperatureChart = forwardRef(({ data, selectedDate, selectedPointTime, on
         <InfoText>
           Haga click en un punto para ver las próximas 4 horas en la tabla
         </InfoText>
-        
+
+        <InfoText>
+          Horario local del lote ({getOffsetLabel(tz)})
+        </InfoText>
+
         <DataSourceSection>
           <DataSourceLabel>Fuente:</DataSourceLabel>
           <LearnMoreLink onClick={handleLearnMore}>
